@@ -270,7 +270,7 @@ export function generateMockComicFrames(analysis, count = 4) {
     const seed = `ctx${i}${(themes[0] || 'x').slice(0, 4)}`
     return {
       panel_number: i + 1,
-      image_url: `https://picsum.photos/seed/${seed}/300/300`,
+      image_url: `https://source.unsplash.com/300x300/?${encodeURIComponent((themes[0]||'technology').toLowerCase().replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-'))},${['discovery','challenge','research','breakthrough','work','teamwork','struggle','success'][i%8]}&sig=${i}`,
       caption: tpl.caption,
       dialogue: tpl.dialogue,
     }
@@ -314,7 +314,7 @@ export function generateMockMemes(analysis, count = 3) {
     const seed = `meme${i}${(themes[0] || 'x').slice(0, 4)}`
     return {
       id: i + 1,
-      image_url: `https://picsum.photos/seed/${seed}/400/400`,
+      image_url: `https://source.unsplash.com/400x400/?${encodeURIComponent((themes[0]||'technology').toLowerCase().replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-'))},reaction&sig=${i+100}`,
       top_text: tpl.top_text,
       bottom_text: tpl.bottom_text,
     }
