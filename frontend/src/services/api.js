@@ -157,23 +157,26 @@ export const healthCheck = async () => {
  * Extract a readable title/topic from a URL or raw text.
  */
 function _extractTopicFromInput(source = '', rawText = '') {
-  // Try to get topic from URL path segments
-  if (source.startsWith('http')) {
+  // Strip file names like "Instruction.pdf" -> use rawText instead
+  const isFilename = /^[^/\\]+\.(pdf|docx?|txt|pptx?)$/i.test(source)
+  if (!isFilename && source.startsWith('http')) {
     try {
       const url = new URL(source)
       const segments = url.pathname.split('/').filter(Boolean)
       const last = segments[segments.length - 1] || url.hostname
-      // Clean slug: replace hyphens/underscores with spaces, strip extensions
-      const slug = last.replace(/\.(html?|php|aspx?)$/i, '').replace(/[-_]/g, ' ')
-      if (slug.length > 3) return slug
-      // Fallback: hostname without www/tld
+      const slug = last.replace(/\.(html?|php|aspx?|pdf)$/i, '').replace(/[-_]/g, ' ')
+      if (slug.length > 3 && !/^[0-9]+$/.test(slug)) return slug
       return url.hostname.replace(/^www\./i, '').split('.')[0]
     } catch {}
   }
-  // Fallback: extract first noun-like phrase from text
-  const words = rawText.trim().split(/\s+/).slice(0, 30)
-  const significant = words.filter(w => w.length > 4 && /^[A-Z]/.test(w))
-  return significant.slice(0, 2).join(' ') || source || 'your content'
+  // Extract topic from raw text content (works for PDFs and plain text)
+  const stopWords = new Set(['the','a','an','and','or','but','in','on','at','to','for','of','with','is','was','are','were','be','this','that','it','its','from','by','as','we','our','your','their','have','has','had','will','can','may','about','which','when','who','how','what'])
+  const words = rawText.trim().split(/\s+/).slice(0, 100)
+  const significant = words.filter(w => w.length > 4 && !stopWords.has(w.toLowerCase()) && /^[A-Za-z]/.test(w))
+  const freqMap = {}
+  significant.forEach(w => { const k = w.toLowerCase(); freqMap[k] = (freqMap[k] || 0) + 1 })
+  const top = Object.entries(freqMap).sort(([,a],[,b]) => b - a).slice(0, 2).map(([w]) => w)
+  return top.join(' ') || 'content insights'
 }
 
 /**
@@ -265,12 +268,17 @@ export function generateMockComicFrames(analysis, count = 4) {
     { caption: `The final revelation`, dialogue: 'This was the key all along.' },
   ]
 
+  // Use a hash of the theme name to get consistent but topic-varied picsum images
+  const themeHash = (themes[0] || 'topic').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  // Panel mood offsets give visually distinct images per panel
+  const moodOffsets = [10, 47, 83, 120, 156, 200, 234, 278, 310, 345, 380, 420]
+
   return Array.from({ length: Math.min(count, 12) }, (_, i) => {
     const tpl = frameTemplates[i % frameTemplates.length]
-    const seed = `ctx${i}${(themes[0] || 'x').slice(0, 4)}`
+    const seed = themeHash + moodOffsets[i % moodOffsets.length]
     return {
       panel_number: i + 1,
-      image_url: `https://source.unsplash.com/300x300/?${encodeURIComponent((themes[0]||'technology').toLowerCase().replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-'))},${['discovery','challenge','research','breakthrough','work','teamwork','struggle','success'][i%8]}&sig=${i}`,
+      image_url: `https://picsum.photos/id/${(seed % 900) + 10}/300/300`,
       caption: tpl.caption,
       dialogue: tpl.dialogue,
     }
@@ -309,12 +317,15 @@ export function generateMockMemes(analysis, count = 3) {
     },
   ]
 
+  const memeHash = (themes[0] || 'topic').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  const memeOffsets = [500, 550, 600, 650, 700]
+
   return Array.from({ length: Math.min(count, 5) }, (_, i) => {
     const tpl = templates[i % templates.length]
-    const seed = `meme${i}${(themes[0] || 'x').slice(0, 4)}`
+    const seed = (memeHash + memeOffsets[i % memeOffsets.length]) % 900 + 10
     return {
       id: i + 1,
-      image_url: `https://source.unsplash.com/400x400/?${encodeURIComponent((themes[0]||'technology').toLowerCase().replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-'))},reaction&sig=${i+100}`,
+      image_url: `https://picsum.photos/id/${seed}/400/400`,
       top_text: tpl.top_text,
       bottom_text: tpl.bottom_text,
     }
